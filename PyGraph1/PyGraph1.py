@@ -20,26 +20,46 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
     return scaled_ob_prices
 
 plt.show()
-plt.autoscale()
+#plt.autoscale()
+#axes = plt.gca()
+#axes.set_ylim((55000, 60000))
+
+ax = plt.axes()
 
 while True:
     plt.clf()
+
     ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
     values = ret.json()
-    y = [v[-1] for v in values]
-    x = [v[1] for v in values]
-    sort_keys = [i for i in range(len(x))]
-    sort_keys.sort(key=lambda i: x[i])
-    x = [x[i] for i in sort_keys]
-    y = [y[i] for i in sort_keys]
+    trade_times = [v[-1] for v in values]
+    trade_prices = [v[1] for v in values]
+    trade_volumes = [abs(v[-2]) for v in values]
+    sort_keys = [i for i in range(len(trade_prices))]
+    sort_keys.sort(key=lambda i: trade_prices[i])
+    
+    trade_prices = [trade_prices[i] for i in sort_keys]         # TODO: remove repetitions
+    trade_times = [trade_times[i] for i in sort_keys]
+    trade_volumes = [trade_volumes [i] for i in sort_keys]
 
-    volume = sum([abs(v[-2]) for v in values])                                  # TODO: investigate if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
-    time_span_length = x[-1] - x[0]
-    volume_per_time_unit = volume / (x[-1] - x[0])                               # per second?
+    max_volume = max(trade_volumes)
+    min_volume = min(trade_volumes)
+    volume = sum(trade_volumes)                                  # TODO: investigate if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
+    
+    time_span_length = trade_prices[-1] - trade_prices[0]
+    volume_per_time_unit = 4 * volume / (trade_prices[-1] - trade_prices[0])                               # per second?
 
-    plt.plot(x, y, 'b')
+    plt.plot(trade_prices, trade_times, 'b')
+    volume_color_values = [int(256 / (max_volume - min_volume) * v) for v in trade_volumes]
+    volume_colors1 = ['#%02x0000' % v for v in volume_color_values]         # WTF: c' argument must be a color, a sequence of colors, or a sequence of numbers, not ['#020000', '#010000', '#020000', 
+    print(volume_colors1)
+
+    volume_colors = ['#ff0000' for v in volume_color_values]
+    print(volume_colors)
+
+    plt.scatter(trade_prices, trade_times, c=volume_colors)
     ax = plt.axes()
     ax.set_facecolor('black')
+    #ax.set(ylim=(57500, 57700))
 
     ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P1")
     values = ret.json()
@@ -55,8 +75,8 @@ while True:
     step_up = 1
     step_down = 1
 
-    plt.plot([x[-1] + step_up * i for i in range(len(scaled_up))], scaled_up, 'r')
-    plt.plot([x[-1] + step_down * i for i in range(len(scaled_down))], scaled_down, 'g')
+    plt.plot([trade_prices[-1] + step_up * i for i in range(len(scaled_up))], scaled_up, 'r')
+    plt.plot([trade_prices[-1] + step_down * i for i in range(len(scaled_down))], scaled_down, '#00FF00')
 
     plt.pause(0.005) # for better animation see https://matplotlib.org/3.1.1/api/animation_api.html#module-matplotlib.animation
 
