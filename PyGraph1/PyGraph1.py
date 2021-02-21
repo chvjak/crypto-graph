@@ -26,40 +26,44 @@ plt.show()
 
 ax = plt.axes()
 
-while True:
-    plt.clf()
 
+trade_prices = []
+trade_times = []
+trade_volumes = []
+
+while True:
+
+    plt.clf()
+    plt.grid(b = True, c="w")
     ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
     values = ret.json()
-    trade_times = [v[-1] for v in values]
-    trade_prices = [v[1] for v in values]
-    trade_volumes = [abs(v[-2]) for v in values]
-    sort_keys = [i for i in range(len(trade_prices))]
-    sort_keys.sort(key=lambda i: trade_prices[i])
+    trade_prices += [v[-1] for v in values]
+    trade_times += [v[1] for v in values]
+    trade_volumes += [abs(v[-2]) for v in values]
+    trade_volumes1 = [v[-2] for v in values]
+    sort_keys = [i for i in range(len(trade_times))]
+    sort_keys.sort(key=lambda i: trade_times[i])
     
-    trade_prices = [trade_prices[i] for i in sort_keys]         # TODO: remove repetitions
     trade_times = [trade_times[i] for i in sort_keys]
+    trade_prices = [trade_prices[i] for i in sort_keys]
     trade_volumes = [trade_volumes [i] for i in sort_keys]
+    trade_volumes1 = [trade_volumes1 [i] for i in sort_keys]
 
     max_volume = max(trade_volumes)
     min_volume = min(trade_volumes)
     volume = sum(trade_volumes)                                  # TODO: investigate if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
     
-    time_span_length = trade_prices[-1] - trade_prices[0]
-    volume_per_time_unit = 4 * volume / (trade_prices[-1] - trade_prices[0])                               # per second?
+    time_span_length = trade_times[-1] - trade_times[0]
+    volume_per_time_unit = volume / (trade_times[-1] - trade_times[0])                               # per second?
 
-    plt.plot(trade_prices, trade_times, 'b')
-    volume_color_values = [int(256 / (max_volume - min_volume) * v) for v in trade_volumes]
-    volume_colors1 = ['#%02x0000' % v for v in volume_color_values]         # WTF: c' argument must be a color, a sequence of colors, or a sequence of numbers, not ['#020000', '#010000', '#020000', 
-    print(volume_colors1)
+    plt.plot(trade_times, trade_prices, 'b')
+    volume_color_values = [100 + int(155 / (max_volume - min_volume) * v) for v in trade_volumes]
+    volume_colors = ['#%02x0000' % v for v in volume_color_values]
 
-    volume_colors = ['#ff0000' for v in volume_color_values]
-    print(volume_colors)
-
-    plt.scatter(trade_prices, trade_times, c=volume_colors)
+    plt.scatter(trade_times, trade_prices, c=volume_colors)
     ax = plt.axes()
     ax.set_facecolor('black')
-    #ax.set(ylim=(57500, 57700))
+    #ax.set(ylim=(57600, 57900))
 
     ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P1")
     values = ret.json()
@@ -75,8 +79,8 @@ while True:
     step_up = 1
     step_down = 1
 
-    plt.plot([trade_prices[-1] + step_up * i for i in range(len(scaled_up))], scaled_up, 'r')
-    plt.plot([trade_prices[-1] + step_down * i for i in range(len(scaled_down))], scaled_down, '#00FF00')
+    plt.plot([trade_times[-1] + step_up * i for i in range(len(scaled_up))], scaled_up, 'r')
+    plt.plot([trade_times[-1] + step_down * i for i in range(len(scaled_down))], scaled_down, '#00FF00')
 
     plt.pause(0.005) # for better animation see https://matplotlib.org/3.1.1/api/animation_api.html#module-matplotlib.animation
 
