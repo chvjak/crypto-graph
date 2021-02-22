@@ -1,6 +1,9 @@
+# hthis one: dash + plotly
 # https://www.geeksforgeeks.org/plot-live-graphs-using-python-dash-and-plotly/amp/
-# alternative
+
+# quite verbose but flask+chartjs
 # https://medium.com/@data.corgi9/real-time-graph-using-flask-75f6696deb55
+# https://towardsdatascience.com/flask-and-chart-js-tutorial-i-d33e05fba845
 
 import dash 
 from dash.dependencies import Output, Input
@@ -10,6 +13,7 @@ import plotly
 import random 
 import plotly.graph_objs as go 
 from collections import deque 
+import requests as r
 
 
 X = deque(maxlen = 20) 
@@ -29,14 +33,25 @@ app.layout = html.Div(
     ] 
 ) 
 
-@app.callback( 
-    Output('live-graph', 'figure'), 
-    [ Input('graph-update', 'n_intervals') ] 
-) 
-
+@app.callback(Output('live-graph', 'figure'), [ Input('graph-update', 'n_intervals') ]) 
 def update_graph_scatter(n): 
-    X.append(X[-1]+1) 
-    Y.append(Y[-1]+Y[-1] * random.uniform(-0.1,0.1)) 
+    global X
+    global Y
+
+    ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
+    values = ret.json()
+    trade_prices = [v[-1] for v in values]
+    trade_times = [v[1] for v in values]
+
+    sort_keys = [i for i in range(len(trade_times))]
+    sort_keys.sort(key=lambda i: trade_times[i])
+    
+    trade_times = [trade_times[i] for i in sort_keys]
+    trade_prices = [trade_prices[i] for i in sort_keys]
+
+    X += trade_times
+    Y += trade_prices
+
     data = go.Scatter( 
             x=list(X), 
             y=list(Y), 
@@ -44,8 +59,7 @@ def update_graph_scatter(n):
             mode= 'lines+markers'
     ) 
 
-    return {'data': [data], 
-            'layout' : go.Layout(xaxis=dict(range=[min(X),max(X)]),yaxis = dict(range = [min(Y),max(Y)]),)} 
+    return {'data': [data], 'layout' : go.Layout(xaxis = dict(range = [min(X), max(X)]), yaxis = dict(range = [min(Y), max(Y)]),)} 
 
 if __name__ == '__main__': 
     app.run_server()
