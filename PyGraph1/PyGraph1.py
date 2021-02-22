@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import requests as r
 import bisect as bs
+from collections import deque 
 
 def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
     ps_up_volume = ob_volumes[:]            # prefix sum
@@ -20,51 +21,67 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
     return scaled_ob_prices
 
 plt.show()
-#plt.autoscale()
 
-ax = plt.axes()
+MAX_TRADE_LEN = 300
+trade_prices = deque(maxlen = MAX_TRADE_LEN)
+trade_times = deque(maxlen = MAX_TRADE_LEN)
+trade_volumes = deque(maxlen = MAX_TRADE_LEN)
 
-
-trade_prices = []
-trade_times = []
-trade_volumes = []
-
-ob_deck = []
-MAX_OB_DECK = 50
+MAX_OB_DECK = 3
+ob_deck = deque(maxlen = MAX_OB_DECK)
 
 while True:
 
     plt.clf()
-    plt.grid(b = True, c="#006400")
+    plt.grid(b = True, c="#006464")
+    
     ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
     values = ret.json()
-    trade_prices += [v[-1] for v in values]
-    trade_times += [v[1] for v in values]
-    trade_volumes += [abs(v[-2]) for v in values]
+    unsorted_trade_prices = [v[-1] for v in values]
+    unsorted_trade_times = [v[1] for v in values]
+    unsorted_trade_volumes = [abs(v[-2]) for v in values]
 
-    sort_keys = [i for i in range(len(trade_times))]
-    sort_keys.sort(key=lambda i: trade_times[i])
-    
-    trade_times = [trade_times[i] for i in sort_keys]
-    trade_prices = [trade_prices[i] for i in sort_keys]
-    trade_volumes = [trade_volumes [i] for i in sort_keys]
+    sort_keys = [i for i in range(len(unsorted_trade_times))]
+    sort_keys.sort(key=lambda i: unsorted_trade_times[i])
 
+    # the bug is connected to the fact that trades batches overlap. the bug is WIP
+    # take only those on o later as trade_times[-1]
+    sorted_trade_times = [unsorted_trade_times[i] for i in sort_keys]
+    sorted_trade_prices = [unsorted_trade_prices[i] for i in sort_keys]
+    sorted_trade_volumes = [unsorted_trade_volumes [i] for i in sort_keys]
+
+    if len(trade_times):
+        limit_time = trade_times[-1]
+        limit_time_ix = bs.bisect_right(sorted_trade_times, limit_time)     # SEEMS there is still overlap
+        if limit_time_ix < len(sorted_trade_times):
+            trade_times += sorted_trade_times[limit_time_ix:]      # TODO: DRY
+            trade_prices += sorted_trade_prices[limit_time_ix:]
+            trade_volumes += sorted_trade_volumes[limit_time_ix:]
+        else:
+            # nothing to add - same trades
+            print("")
+    else:
+        trade_times += sorted_trade_times                           # TODO: DRY
+        trade_prices += sorted_trade_prices
+        trade_volumes += sorted_trade_volumes
+
+
+
+    # plot price graph
+    plt.plot(trade_times, trade_prices, 'b')
+    ax = plt.axes()
+    ax.set_facecolor('black')
+
+    # plot trades with color coded volumes
     max_volume = max(trade_volumes)
     min_volume = min(trade_volumes)
-    volume = sum(trade_volumes)                                  # TODO: investigate if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
-    
-    time_span_length = trade_times[-1] - trade_times[0]
-    volume_per_time_unit = volume / (trade_times[-1] - trade_times[0])                               # per millisecond
 
-    plt.plot(trade_times, trade_prices, 'b')
     volume_color_values = [100 + int(155 / (max_volume - min_volume) * v) for v in trade_volumes]
     volume_colors = ['#%02x0000' % v for v in volume_color_values]
 
     plt.scatter(trade_times, trade_prices, c=volume_colors)
-    ax = plt.axes()
-    ax.set_facecolor('black')
-    #ax.set(ylim=(57600, 57900))
 
+    # plot the order book
     ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P1")
     values = ret.json()
     up = [v[0] for v in values if v[-1] > 0]
@@ -73,13 +90,15 @@ while True:
     down = [v[0] for v in values if v[-1] < 0]
     down_volume_list = [abs(v[-1]) for v in values if v[-1] < 0]
 
+    volume = sum(trade_volumes)                                     # SEEMS NOT: if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
+                                                                    # MAYBE: check if signed_trade_volumes offset over time
+    time_span_length = trade_times[-1] - trade_times[0]
+    volume_per_time_unit = volume / (trade_times[-1] - trade_times[0])                               # per millisecond
+
     scaled_up = rescale_ob(up, up_volume_list, time_span_length, volume_per_time_unit)
     scaled_down = rescale_ob(down, down_volume_list, time_span_length, volume_per_time_unit)
 
     ob_deck.append((trade_times[-1], scaled_up, scaled_down))
-
-    if len(ob_deck) > MAX_OB_DECK:
-        ob_deck.pop(0)
 
     color_step = int(255 / (len(ob_deck)))
     color = 0
