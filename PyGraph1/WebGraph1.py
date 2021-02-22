@@ -13,8 +13,7 @@ import plotly
 import random 
 import plotly.graph_objs as go 
 from collections import deque 
-import requests as r
-
+import Utils as u
 
 X = deque(maxlen = 20) 
 X.append(1) 
@@ -38,16 +37,7 @@ def update_graph_scatter(n):
     global X
     global Y
 
-    ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
-    values = ret.json()
-    trade_prices = [v[-1] for v in values]
-    trade_times = [v[1] for v in values]
-
-    sort_keys = [i for i in range(len(trade_times))]
-    sort_keys.sort(key=lambda i: trade_times[i])
-    
-    trade_times = [trade_times[i] for i in sort_keys]
-    trade_prices = [trade_prices[i] for i in sort_keys]
+    trade_prices, trade_volumes, trade_times = u.load_trades(X[-1] if len(X) else 0)
 
     X += trade_times
     Y += trade_prices

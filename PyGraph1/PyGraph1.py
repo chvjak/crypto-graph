@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import requests as r
 import bisect as bs
 from collections import deque 
+import Utils
 
 def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
     ps_up_volume = ob_volumes[:]            # prefix sum
@@ -20,6 +21,7 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
             break
     return scaled_ob_prices
 
+
 plt.show()
 
 MAX_TRADE_LEN = 300
@@ -34,38 +36,12 @@ while True:
 
     plt.clf()
     plt.grid(b = True, c="#006464")
-    
-    ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
-    values = ret.json()
-    unsorted_trade_prices = [v[-1] for v in values]
-    unsorted_trade_times = [v[1] for v in values]
-    unsorted_trade_volumes = [abs(v[-2]) for v in values]
 
-    sort_keys = [i for i in range(len(unsorted_trade_times))]
-    sort_keys.sort(key=lambda i: unsorted_trade_times[i])
+    truncated_prices, truncated_volumes, tuncated_times = Utils.load_trades(trade_times[-1] if len(trade_times) else 0)
 
-    # the bug is connected to the fact that trades batches overlap. the bug is WIP
-    # take only those on o later as trade_times[-1]
-    sorted_trade_times = [unsorted_trade_times[i] for i in sort_keys]
-    sorted_trade_prices = [unsorted_trade_prices[i] for i in sort_keys]
-    sorted_trade_volumes = [unsorted_trade_volumes [i] for i in sort_keys]
-
-    if len(trade_times):
-        limit_time = trade_times[-1]
-        limit_time_ix = bs.bisect_right(sorted_trade_times, limit_time)     # SEEMS there is still overlap
-        if limit_time_ix < len(sorted_trade_times):
-            trade_times += sorted_trade_times[limit_time_ix:]      # TODO: DRY
-            trade_prices += sorted_trade_prices[limit_time_ix:]
-            trade_volumes += sorted_trade_volumes[limit_time_ix:]
-        else:
-            # nothing to add - same trades
-            print("")
-    else:
-        trade_times += sorted_trade_times                           # TODO: DRY
-        trade_prices += sorted_trade_prices
-        trade_volumes += sorted_trade_volumes
-
-
+    trade_times += tuncated_times
+    trade_prices += truncated_prices
+    trade_volumes += truncated_volumes
 
     # plot price graph
     plt.plot(trade_times, trade_prices, 'b')

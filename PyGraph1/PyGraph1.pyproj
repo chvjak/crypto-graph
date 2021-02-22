@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>9d2e5fb4-c0bc-42dc-b02a-9e84b2335a77</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PyGraph1.py</StartupFile>
+    <StartupFile>ProperPltAnimation.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -25,6 +25,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="PyGraph1.py" />
+    <Compile Include="Utils.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="WebGraph1.py">
       <SubType>Code</SubType>
     </Compile>

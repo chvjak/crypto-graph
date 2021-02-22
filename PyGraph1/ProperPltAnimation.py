@@ -4,9 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import requests as r
+import Utils as u
+from collections import deque 
 
 fig, ax = plt.subplots()
-xdata, ydata = [], []
+
+MAX_TRADE_LEN = 300
+xdata = deque(maxlen = MAX_TRADE_LEN ) 
+ydata = deque(maxlen = MAX_TRADE_LEN ) 
 ln, = plt.plot([], [], 'b')
 
 def init():
@@ -19,19 +24,11 @@ def init():
 def update(frame):
     global xdata, ydata
 
-    ret = r.get("https://api-pub.bitfinex.com/v2/trades/tBTCUSD/hist")
-    values = ret.json()
-    trade_prices = [v[-1] for v in values]
-    trade_times = [v[1] for v in values]
 
-    sort_keys = [i for i in range(len(trade_times))]
-    sort_keys.sort(key=lambda i: trade_times[i])
-    
-    trade_times = [trade_times[i] for i in sort_keys]
-    trade_prices = [trade_prices[i] for i in sort_keys]
-
+    trade_prices, trade_volumes, trade_times = u.load_trades(xdata[-1] if len(xdata) else 0)
     xdata += trade_times
     ydata  += trade_prices
+
     ln.set_data(xdata, ydata)
     
     ax.relim()
