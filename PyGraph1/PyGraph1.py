@@ -51,7 +51,7 @@ while True:
     plt.clf()
     plt.grid(b = True, c="#006464")
 
-    truncated_prices, truncated_volumes, tuncated_times = Utils.load_trades(trade_times[-1] if len(trade_times) else 0)
+    truncated_prices, truncated_volumes, tuncated_times = Utils.load_trades((1 + trade_times[-1]) if len(trade_times) else 0)
 
     trade_times += tuncated_times
     trade_prices += truncated_prices
