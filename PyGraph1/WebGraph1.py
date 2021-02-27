@@ -15,9 +15,9 @@ import plotly.graph_objs as go
 from collections import deque 
 import Utils as u
 
-X = deque(maxlen = 20) 
+X = deque(maxlen = 80) 
 X.append(1) 
-Y = deque(maxlen = 20) 
+Y = deque(maxlen = 80) 
 Y.append(1) 
 
 app = dash.Dash(__name__) 
@@ -49,7 +49,7 @@ def update_graph_scatter(n):
             mode= 'lines+markers'
     ) 
 
-    return {'data': [data], 'layout' : go.Layout(xaxis = dict(range = [min(X), max(X)]), yaxis = dict(range = [min(Y), max(Y)]),)} 
+    return {'data': [data], 'layout' : go.Layout(xaxis = dict(range = [min(X), max(X)]), yaxis = dict(range = [min(Y), max(Y)]), height = 700)} 
 
 if __name__ == '__main__': 
     app.run_server()
