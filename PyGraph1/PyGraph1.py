@@ -24,13 +24,27 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
 
 plt.show()
 
-MAX_TRADE_LEN = 300
+# TODO: longer time period to plot - 10-20 mins, on web gui - add a control
+# TODO: control  for different OB aggregations
+# TODO: control to select marker
+
+MAX_TRADE_LEN = 200         # TODO: trade orders vs time - now it's orders
 trade_prices = deque(maxlen = MAX_TRADE_LEN)
 trade_times = deque(maxlen = MAX_TRADE_LEN)
 trade_volumes = deque(maxlen = MAX_TRADE_LEN)
 
 MAX_OB_DECK = 3
 ob_deck = deque(maxlen = MAX_OB_DECK)
+
+def load_ob():
+    ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P0")
+    values = ret.json()
+    up = [v[0] for v in values if v[-1] > 0]                    # price levels
+    up_volume_list = [v[-1] for v in values if v[-1] > 0]       # volumes
+    
+    down = [v[0] for v in values if v[-1] < 0]
+    down_volume_list = [abs(v[-1]) for v in values if v[-1] < 0]
+    return down, down_volume_list, up, up_volume_list
 
 while True:
 
@@ -58,13 +72,8 @@ while True:
     plt.scatter(trade_times, trade_prices, c=volume_colors)
 
     # plot the order book
-    ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P1")
-    values = ret.json()
-    up = [v[0] for v in values if v[-1] > 0]
-    up_volume_list = [v[-1] for v in values if v[-1] > 0]
+    down, down_volume_list, up, up_volume_list = load_ob()
 
-    down = [v[0] for v in values if v[-1] < 0]
-    down_volume_list = [abs(v[-1]) for v in values if v[-1] < 0]
 
     volume = sum(trade_volumes)                                     # SEEMS NOT: if the trades are recorded twice - as SELL and as BUY - in this case the VOLUME is doubled
                                                                     # MAYBE: check if signed_trade_volumes offset over time
