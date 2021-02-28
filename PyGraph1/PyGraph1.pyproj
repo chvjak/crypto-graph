@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>9d2e5fb4-c0bc-42dc-b02a-9e84b2335a77</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>ProperPltAnimation.py</StartupFile>
+    <StartupFile>PyGraph1.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
