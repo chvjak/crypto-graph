@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import dates as mpldates
 import matplotlib.pyplot as plt
 import requests as r
 import bisect as bs
@@ -6,7 +7,8 @@ from collections import deque
 import datetime
 import Utils
 
-AGGREGATION_PERIOD_LENGTH = 60 * 1000 
+#AGGREGATION_PERIOD_LENGTH = 60 * 1000 
+AGGREGATION_PERIOD_LENGTH = 1000 
 
 def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
     ps_up_volume = ob_volumes[:]            # prefix sum
@@ -26,6 +28,10 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
             break
     return scaled_ob_prices
 
+def to_mpl_date(ts):
+    d = datetime.datetime.fromtimestamp(ts / 1000) 
+    mpd = mpldates.date2num(d)
+    return 
 
 #P0 x6 volumes
 #P1 [45040, 45040, 45020, 45010, 45000, 45000, 45000, 44980, 44980, 44970]
@@ -41,7 +47,7 @@ plt.style.use('dark_background')        # SEE ALSO: https://stackoverflow.com/qu
 # TODO: control  for different OB aggregations
 # TODO: control to select marker
 
-MAX_TRADE_LEN = 200         # TODO: trade orders vs time - now it's orders
+MAX_TRADE_LEN = 400         # TODO: trade orders vs time - now it's orders
 trade_prices = deque(maxlen = MAX_TRADE_LEN)
 trade_times = deque(maxlen = MAX_TRADE_LEN)
 trade_volumes = deque(maxlen = MAX_TRADE_LEN)
@@ -50,7 +56,7 @@ MAX_OB_DECK = 10
 ob_deck = deque(maxlen = MAX_OB_DECK)
 
 def load_ob():
-    ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P2")
+    ret = r.get("https://api-pub.bitfinex.com/v2/book/tBTCUSD/P1")
     values = ret.json()
     up = [v[0] for v in values if v[-1] > 0]                    # price levels
     up_volume_list = [v[-1] for v in values if v[-1] > 0]       # volumes
@@ -68,16 +74,20 @@ while True:
     ts_now = datetime.datetime.now().timestamp() * 1000 
     limit_time  = (1 + trade_times[-1]) if len(trade_times) else (ts_now - aggregation_period * 10)
 
-    truncated_prices, truncated_volumes, tuncated_times = Utils.load_aggregated_trades(limit_time, "1m")
+    #truncated_prices, truncated_volumes, tuncated_times = Utils.load_aggregated_trades(limit_time, "1m")
+    truncated_prices, truncated_volumes, tuncated_times = Utils.load_trades(limit_time)
 
     trade_times += tuncated_times
     trade_prices += truncated_prices
     trade_volumes += truncated_volumes
 
     # plot price graph
-    plt.plot(trade_times, trade_prices, 'b')
+    plt.plot([to_mpl_date(t) for t in trade_times], trade_prices, 'b')
     ax = plt.axes()
     ax.set_facecolor('black')
+
+    xfmt = mpldates.DateFormatter('%H:%M:%S')
+    ax.xaxis.set_major_formatter(xfmt)
 
     # plot trades with color coded volumes
     max_volume = max(trade_volumes)
@@ -87,7 +97,7 @@ while True:
     volume_colors = ['#%02x0000' % int(v) for v in volume_color_values]
 
     #plt.scatter(trade_times, trade_prices, c=volume_colors)
-    plt.scatter(trade_times, trade_prices)
+    plt.scatter([to_mpl_date(t) for t in trade_times], trade_prices)
 
     # plot the order book
     down, down_volume_list, up, up_volume_list = load_ob()
@@ -106,9 +116,9 @@ while True:
     color = 0
     for st, su, sd in ob_deck:
         color += color_step 
-        plt.plot([st + AGGREGATION_PERIOD_LENGTH * i for i in range(len(su))], su, '#%02x0000' % color)
-        plt.plot([st + AGGREGATION_PERIOD_LENGTH * i for i in range(len(sd))], sd, '#00%02x00' % color)
+        plt.plot([to_mpl_date(st + AGGREGATION_PERIOD_LENGTH * i) for i in range(len(su))], su, '#%02x0000' % color)
+        plt.plot([to_mpl_date(st + AGGREGATION_PERIOD_LENGTH * i) for i in range(len(sd))], sd, '#00%02x00' % color)
 
     #plt.pause(0.005) # for better animation see https://matplotlib.org/3.1.1/api/animation_api.html#module-matplotlib.animation
-    plt.pause(30) # should correspond to aggregation
+    plt.pause(1) # should correspond to aggregation
 
