@@ -31,7 +31,7 @@ def rescale_ob(ob_prices, ob_volumes, time_span_length, volume_per_time_unit):
 def to_mpl_date(ts):
     d = datetime.datetime.fromtimestamp(ts / 1000) 
     mpd = mpldates.date2num(d)
-    return 
+    return mpd
 
 #P0 x6 volumes
 #P1 [45040, 45040, 45020, 45010, 45000, 45000, 45000, 44980, 44980, 44970]
